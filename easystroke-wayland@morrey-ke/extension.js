@@ -31,8 +31,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
         });
         this._stageCapturedEventId = global.stage.connect('captured-event', (_actor, event) => this._onCapturedEvent(event));
 
-        // Do not register shortcuts as global Shell keybindings: that would
-        // intercept them from the focused application (for example Ctrl+T).
         try {
             const seat = Clutter.get_default_backend().get_default_seat();
             this._virtualKeyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD);
@@ -92,8 +90,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
             distance: 0,
             moved: false,
         };
-        // Observe presses but leave them available to the focused app. This
-        // keeps ordinary clicks, including left-handed primary clicks, intact.
         return Clutter.EVENT_PROPAGATE;
     }
 
@@ -114,8 +110,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
         if (this._gesture.distance >= this._threshold)
             this._gesture.moved = true;
 
-        // Always propagate motion; consuming it prevents apps from receiving
-        // drag/motion input while a gesture is being tracked.
         return Clutter.EVENT_PROPAGATE;
     }
 
@@ -130,8 +124,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
             if (action)
                 this._runAction(action);
         }
-        // The release must reach the app too, so its button state is never
-        // left pressed and normal click handling remains intact.
         return Clutter.EVENT_PROPAGATE;
     }
 
