@@ -10,6 +10,24 @@ function gestureTitle(action) {
     return action.split('-').map(direction => direction[0].toUpperCase() + direction.slice(1)).join(' → ');
 }
 
+function acceleratorFromEvent(event) {
+    const keyval = event.get_keyval()[1];
+    const state = event.get_modifier_state();
+    const mask = Gtk.accelerator_get_default_mod_mask();
+
+    // Ignore modifier-only presses; wait for the user to press a non-modifier key.
+    if ([
+        Gdk.KEY_Control_L, Gdk.KEY_Control_R,
+        Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
+        Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
+        Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
+        Gdk.KEY_Super_L, Gdk.KEY_Super_R,
+    ].includes(keyval))
+        return null;
+
+    return Gtk.accelerator_name(keyval, state & mask);
+}
+
 export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -52,16 +70,33 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
 
         const shortcutsGroup = new Adw.PreferencesGroup({
             title: 'Keyboard shortcuts',
-            description: 'Optional GNOME shortcuts run the same command as the matching gesture. Example: <Control><Alt>Left. Clear a field to disable it.',
+            description: 'Click a shortcut field, then press the key combination you want (for example Ctrl+R or Alt+Left). Press Backspace to clear it.',
         });
         for (const action of ACTIONS) {
             const key = `shortcut-${action}`;
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} action`});
-            const entry = new Gtk.Entry({text: settings.get_strv(key)[0] ?? '', placeholder_text: '<Control><Alt>Left', hexpand: true, valign: Gtk.Align.CENTER});
+            const entry = new Gtk.Entry({
+                text: settings.get_strv(key)[0] ?? '',
+                placeholder_text: 'Click and press keys…',
+                editable: false,
+                can_focus: true,
+                hexpand: true,
+                valign: Gtk.Align.CENTER,
+            });
             entry.set_width_chars(28);
-            entry.connect('changed', () => {
-                const accelerator = entry.get_text().trim();
-                settings.set_strv(key, accelerator ? [accelerator] : []);
+            entry.connect('key-press-event', (_widget, event) => {
+                const keyval = event.get_keyval()[1];
+                if (keyval === Gdk.KEY_BackSpace || keyval === Gdk.KEY_Delete) {
+                    entry.set_text('');
+                    settings.set_strv(key, []);
+                    return true;
+                }
+                const accelerator = acceleratorFromEvent(event);
+                if (!accelerator)
+                    return true;
+                entry.set_text(accelerator);
+                settings.set_strv(key, [accelerator]);
+                return true;
             });
             row.add_suffix(entry);
             shortcutsGroup.add(row);

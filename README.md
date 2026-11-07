@@ -7,6 +7,7 @@ An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter on Wayland
 - Four straight gestures: left, right, up, and down.
 - 12 ordered two-direction combinations with different directions (4 × 3). Repeated pairs such as left → left and up → up are excluded.
 - Custom commands and optional GNOME keyboard shortcuts for each gesture.
+- Configure shortcuts by focusing a shortcut field and pressing the desired key combination (for example Ctrl+R or Alt+Left); press Backspace/Delete to clear it.
 - Configurable trigger button and minimum total pointer travel.
 
 Draw a two-leg gesture with a clear turn while holding the trigger button. The default trigger is mouse button 3 (right button); its press, motion, and release are consumed while tracking.
@@ -32,7 +33,7 @@ If installing for the first time, log out and back in if the extension is not di
 
 ## Configure and test
 
-Configure gesture commands and optional shortcuts in preferences. For a harmless test use `notify-send 'Gesture test' 'Left then right'` (requires `libnotify`). Shortcut accelerators use syntax such as `<Control><Alt>Left`; clear a shortcut field to disable it. Commands are user-configured shell commands; only enter commands you trust.
+Configure gesture commands and shortcuts in preferences. For a harmless test use `notify-send 'Gesture test' 'Left then right'` (requires `libnotify`). Click a shortcut field and press your desired combination; the displayed accelerator is saved automatically. Press Backspace or Delete to clear it. Commands are user-configured shell commands; only enter commands you trust.
 
 Draw a distinct two-leg path for combinations such as left → right or up → left. Repeated directions (same direction twice) are not supported.
 
