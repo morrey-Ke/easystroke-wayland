@@ -5,7 +5,7 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
-    DIRECTIONS.map(second => `${first}-${second}`))];
+    DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
 
 function gestureTitle(action) {
     return action.split('-').map(direction =>
@@ -105,7 +105,7 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
 
         const actionsGroup = new Adw.PreferencesGroup({
             title: 'Gesture actions',
-            description: 'Configure commands for cardinal gestures and ordered two-direction combinations.',
+            description: 'Configure commands for cardinal gestures and ordered two-direction combinations with different directions.',
         });
         for (const action of ACTIONS) {
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} gesture`});

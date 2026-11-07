@@ -7,7 +7,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
-    DIRECTIONS.map(second => `${first}-${second}`))];
+    DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
 const PAUSE_THRESHOLD_MS = 350;
 
 export default class EasyStrokeWaylandExtension extends Extension {
