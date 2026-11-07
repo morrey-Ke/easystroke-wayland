@@ -4,12 +4,10 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
-    DIRECTIONS.map(second => `${first}-${second}`))];
+    DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
 
 function gestureTitle(action) {
-    return action.split('-')
-        .map(direction => direction[0].toUpperCase() + direction.slice(1))
-        .join(' → ');
+    return action.split('-').map(direction => direction[0].toUpperCase() + direction.slice(1)).join(' → ');
 }
 
 export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
@@ -20,31 +18,18 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
             title: 'Gesture behavior',
             description: 'Choose the mouse button and minimum pointer travel for a gesture.',
         });
-
         const buttonRow = new Adw.ActionRow({title: 'Trigger button', subtitle: '3 is the right mouse button'});
         const buttonSpin = new Gtk.SpinButton({
-            adjustment: new Gtk.Adjustment({
-                lower: 1, upper: 16, step_increment: 1, page_increment: 1,
-                value: settings.get_int('trigger-button'),
-            }),
-            numeric: true,
-            valign: Gtk.Align.CENTER,
+            adjustment: new Gtk.Adjustment({lower: 1, upper: 16, step_increment: 1, page_increment: 1, value: settings.get_int('trigger-button')}),
+            numeric: true, valign: Gtk.Align.CENTER,
         });
         buttonSpin.connect('value-changed', () => settings.set_int('trigger-button', buttonSpin.get_value_as_int()));
         buttonRow.add_suffix(buttonSpin);
         behaviorGroup.add(buttonRow);
-
-        const thresholdRow = new Adw.ActionRow({
-            title: 'Minimum gesture distance',
-            subtitle: 'Minimum total pointer travel in pixels',
-        });
+        const thresholdRow = new Adw.ActionRow({title: 'Minimum gesture distance', subtitle: 'Minimum total pointer travel in pixels'});
         const thresholdSpin = new Gtk.SpinButton({
-            adjustment: new Gtk.Adjustment({
-                lower: 10, upper: 300, step_increment: 5, page_increment: 20,
-                value: settings.get_int('trigger-threshold'),
-            }),
-            numeric: true,
-            valign: Gtk.Align.CENTER,
+            adjustment: new Gtk.Adjustment({lower: 10, upper: 300, step_increment: 5, page_increment: 20, value: settings.get_int('trigger-threshold')}),
+            numeric: true, valign: Gtk.Align.CENTER,
         });
         thresholdSpin.connect('value-changed', () => settings.set_int('trigger-threshold', thresholdSpin.get_value_as_int()));
         thresholdRow.add_suffix(thresholdSpin);
@@ -53,19 +38,14 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
 
         const actionsGroup = new Adw.PreferencesGroup({
             title: 'Gesture actions',
-            description: 'Configure commands for four cardinal gestures and all 16 ordered two-direction combinations. Clear a command to disable it.',
+            description: 'Configure commands for four cardinal gestures and 12 ordered two-direction combinations with different directions.',
         });
         for (const action of ACTIONS) {
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} gesture`});
-            const commandEntry = new Gtk.Entry({
-                text: settings.get_string(`action-${action}`),
-                placeholder_text: 'Shell command (leave blank to disable)',
-                hexpand: true,
-                valign: Gtk.Align.CENTER,
-            });
-            commandEntry.set_width_chars(32);
-            commandEntry.connect('changed', () => settings.set_string(`action-${action}`, commandEntry.get_text()));
-            row.add_suffix(commandEntry);
+            const entry = new Gtk.Entry({text: settings.get_string(`action-${action}`), placeholder_text: 'Shell command (leave blank to disable)', hexpand: true, valign: Gtk.Align.CENTER});
+            entry.set_width_chars(32);
+            entry.connect('changed', () => settings.set_string(`action-${action}`, entry.get_text()));
+            row.add_suffix(entry);
             actionsGroup.add(row);
         }
         page.add(actionsGroup);
@@ -77,18 +57,13 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
         for (const action of ACTIONS) {
             const key = `shortcut-${action}`;
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} action`});
-            const shortcutEntry = new Gtk.Entry({
-                text: settings.get_strv(key)[0] ?? '',
-                placeholder_text: '<Control><Alt>Left',
-                hexpand: true,
-                valign: Gtk.Align.CENTER,
-            });
-            shortcutEntry.set_width_chars(28);
-            shortcutEntry.connect('changed', () => {
-                const accelerator = shortcutEntry.get_text().trim();
+            const entry = new Gtk.Entry({text: settings.get_strv(key)[0] ?? '', placeholder_text: '<Control><Alt>Left', hexpand: true, valign: Gtk.Align.CENTER});
+            entry.set_width_chars(28);
+            entry.connect('changed', () => {
+                const accelerator = entry.get_text().trim();
                 settings.set_strv(key, accelerator ? [accelerator] : []);
             });
-            row.add_suffix(shortcutEntry);
+            row.add_suffix(entry);
             shortcutsGroup.add(row);
         }
         page.add(shortcutsGroup);
