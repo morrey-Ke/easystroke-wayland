@@ -1,70 +1,44 @@
 # EasyStroke Wayland for GNOME Shell
 
-A lightweight Easystroke-style gesture extension designed for Mutter/Wayland on Nyarch Linux and other GNOME-based desktops.
+An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter, including Wayland sessions. It uses GNOME Shell's supported JavaScript ES modules and extension lifecycle (`Extension` and `ExtensionPreferences`).
 
-This project is intentionally simple and realistic for a GNOME Shell extension: it captures global pointer motion while a configured mouse button is held, classifies the resulting stroke, and runs a user-configurable command when the gesture is recognized.
+## What it does
 
-Features
-- Wayland/Mutter friendly input capture through GNOME Shell event handling
-- Gesture trigger via a configurable mouse button
-- Recognizes simple directional gestures: left, right, up, down
-- User-configurable commands via GNOME settings
-- Optional notification when a gesture is detected
+- Watches stage-level pointer events while the configured trigger button is held.
+- Recognizes four straight gestures: left, right, up, and down.
+- Runs the shell command configured for a recognized gesture.
+- Provides preferences for the trigger button, minimum travel distance, and actions.
 
-Important note
-- Full Easystroke parity with X11 is not possible in the same way under Wayland because the desktop compositor controls pointer capture and global input.
-- The practical Mutter-compatible approach is a GNOME Shell extension that listens to compositor events and triggers commands.
-- This implementation is intentionally safe and compatible with the extension model used by GNOME Shell.
+### Wayland limitation
 
-Installation
+On Wayland, a regular application cannot globally capture or synthesize input like an X11 utility. This extension listens to events exposed by GNOME Shell/Mutter, so it only applies to GNOME Shell sessions and does not provide gesture handling in other compositors. Shell event capture and input behavior may also change between GNOME versions.
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/morrey-Ke/easystroke-wayland.git
-   cd easystroke-wayland
-   ```
+## Requirements
 
-2. Copy the extension directory into GNOME Shell's extension directory:
-   ```bash
-   mkdir -p ~/.local/share/gnome-shell/extensions
-   cp -r easystroke-wayland@morrey-ke ~/.local/share/gnome-shell/extensions/
-   ```
+- GNOME Shell 45–48 (as declared in `metadata.json`)
+- `glib-compile-schemas` to compile the GSettings schema
 
-3. Restart GNOME Shell or log out/in.
+## Install from a clone
 
-4. Enable the extension with GNOME Extensions or the Extensions app.
-
-5. Open the settings UI to adjust the trigger button and commands.
-
-Default gesture behavior
-- Right mouse button drag -> gesture begins
-- Drag left -> run command configured for left
-- Drag right -> run command configured for right
-- Drag up -> run command configured for up
-- Drag down -> run command configured for down
-
-Example default commands
-- left: `gnome-terminal --`
-- right: `xdg-open https://github.com/morrey-Ke/easystroke-wayland`
-- up: `gnome-control-center`
-- down: `nautilus ~`
-
-You may want to replace them with your own launchers for terminal, browser, app switcher, or window actions.
-
-Repository structure
-```text
-.
-├── easystroke-wayland@morrey-ke/
-│   ├── metadata.json
-│   ├── extension.js
-│   ├── prefs.js
-│   ├── stylesheet.css
-│   └── schemas/
-│       └── org.gnome.shell.extensions.easystroke-wayland.gschema.xml
-├── LICENSE
-├── README.md
-└── .gitignore
+```sh
+git clone https://github.com/morrey-Ke/easystroke-wayland.git
+cd easystroke-wayland
+install -d "$HOME/.local/share/gnome-shell/extensions/easystroke-wayland@morrey-ke/schemas"
+cp -r easystroke-wayland@morrey-ke/. "$HOME/.local/share/gnome-shell/extensions/easystroke-wayland@morrey-ke/"
+glib-compile-schemas "$HOME/.local/share/gnome-shell/extensions/easystroke-wayland@morrey-ke/schemas"
 ```
 
-Status
-This is a foundation for a Mutation/Mutter-compatible Easystroke replacement and is suitable as a base for extending gesture detection, command profiles, or custom actions.
+Then log out and back in if needed, enable **EasyStroke Wayland** in the Extensions app, and open its preferences. On Wayland, use a full log out/in when restarting GNOME Shell.
+
+## Usage and safety
+
+The default trigger is mouse button 3 (right button), with a 40-pixel minimum gesture. The default commands are examples; review and edit them in preferences before use. Gesture commands are user-configured shell commands, so only enter commands you trust. Clear an action field to disable that direction.
+
+## Development checks
+
+```sh
+python -m json.tool easystroke-wayland@morrey-ke/metadata.json >/dev/null
+glib-compile-schemas --strict --dry-run easystroke-wayland@morrey-ke/schemas
+```
+
+The extension should still be tested in each GNOME Shell version listed in the metadata; this repository does not currently have an automated GNOME Shell integration test environment.

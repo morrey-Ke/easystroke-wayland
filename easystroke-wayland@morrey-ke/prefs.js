@@ -1,101 +1,88 @@
-const { Adw, Gio, Gtk } = imports.gi;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
+import Gtk from 'gi://Gtk';
+import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-function getSettings() {
-    const schemaDir = Me.dir.get_child('schemas');
-    if (!schemaDir.query_exists(null)) {
-        throw new Error('Schema directory not found');
+const SETTINGS_SCHEMA = 'org.gnome.shell.extensions.easystroke-wayland';
+
+export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
+    fillPreferencesWindow(window) {
+        const settings = this.getSettings(SETTINGS_SCHEMA);
+        const page = new Adw.PreferencesPage({
+            title: 'Gestures',
+            icon_name: 'input-mouse-symbolic',
+        });
+
+        const behaviorGroup = new Adw.PreferencesGroup({
+            title: 'Gesture behavior',
+            description: 'Choose the mouse button and minimum pointer travel for a gesture.',
+        });
+
+        const buttonRow = new Adw.ActionRow({
+            title: 'Trigger button',
+            subtitle: '3 is the right mouse button',
+        });
+        const buttonSpin = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower: 1,
+                upper: 16,
+                step_increment: 1,
+                page_increment: 1,
+                value: settings.get_int('trigger-button'),
+            }),
+            numeric: true,
+            valign: Gtk.Align.CENTER,
+        });
+        buttonSpin.connect('value-changed', () => {
+            settings.set_int('trigger-button', buttonSpin.get_value_as_int());
+        });
+        buttonRow.add_suffix(buttonSpin);
+        behaviorGroup.add(buttonRow);
+
+        const thresholdRow = new Adw.ActionRow({
+            title: 'Minimum gesture distance',
+            subtitle: 'Pointer travel in pixels before a gesture is recognized',
+        });
+        const thresholdSpin = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower: 10,
+                upper: 300,
+                step_increment: 5,
+                page_increment: 20,
+                value: settings.get_int('trigger-threshold'),
+            }),
+            numeric: true,
+            valign: Gtk.Align.CENTER,
+        });
+        thresholdSpin.connect('value-changed', () => {
+            settings.set_int('trigger-threshold', thresholdSpin.get_value_as_int());
+        });
+        thresholdRow.add_suffix(thresholdSpin);
+        behaviorGroup.add(thresholdRow);
+        page.add(behaviorGroup);
+
+        const actionsGroup = new Adw.PreferencesGroup({
+            title: 'Actions',
+            description: 'Shell commands run when the corresponding gesture is recognized.',
+        });
+
+        for (const direction of ['left', 'right', 'up', 'down']) {
+            const row = new Adw.ActionRow({title: `${direction[0].toUpperCase()}${direction.slice(1)} gesture`});
+            const entry = new Gtk.Entry({
+                text: settings.get_string(`action-${direction}`),
+                placeholder_text: 'Leave blank to disable this action',
+                hexpand: true,
+                valign: Gtk.Align.CENTER,
+            });
+            entry.set_width_chars(28);
+            entry.connect('changed', () => {
+                settings.set_string(`action-${direction}`, entry.get_text());
+            });
+            row.add_suffix(entry);
+            actionsGroup.add(row);
+        }
+
+        page.add(actionsGroup);
+        window.add(page);
     }
-
-    const source = Gio.SettingsSchemaSource.new_from_directory(
-        schemaDir.get_path(),
-        Gio.SettingsSchemaSource.get_default(),
-        false,
-        null
-    );
-
-    const schema = source.lookup('org.gnome.shell.extensions.easystroke-wayland', true);
-    if (!schema)
-        throw new Error('Schema not found');
-
-    return new Gio.Settings({ settings_schema: schema });
-}
-
-function buildPrefsWidget() {
-    const settings = getSettings();
-    const box = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        spacing: 12,
-        margin_top: 18,
-        margin_bottom: 18,
-        margin_start: 18,
-        margin_end: 18,
-        hexpand: true,
-        vexpand: true,
-    });
-
-    const heading = new Gtk.Label({
-        label: '<b>EasyStroke Wayland</b>',
-        use_markup: true,
-        xalign: 0,
-    });
-    box.append(heading);
-
-    const triggerButton = new Gtk.SpinButton({
-        adjustment: new Gtk.Adjustment({ lower: 1, upper: 16, step_increment: 1, value: settings.get_int('trigger-button') }),
-        numeric: true,
-    });
-    triggerButton.connect('value-changed', () => {
-        settings.set_int('trigger-button', triggerButton.get_value_as_int());
-    });
-
-    const threshold = new Gtk.SpinButton({
-        adjustment: new Gtk.Adjustment({ lower: 10, upper: 300, step_increment: 5, value: settings.get_int('trigger-threshold') }),
-        numeric: true,
-    });
-    threshold.connect('value-changed', () => {
-        settings.set_int('trigger-threshold', threshold.get_value_as_int());
-    });
-
-    const rows = [
-        { label: 'Gesture trigger button', widget: triggerButton },
-        { label: 'Minimum gesture distance', widget: threshold },
-    ];
-
-    rows.forEach(({ label, widget }) => {
-        const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, hexpand: true });
-        const labelWidget = new Gtk.Label({ label, xalign: 0, hexpand: true });
-        row.append(labelWidget);
-        row.append(widget);
-        box.append(row);
-    });
-
-    const commands = [
-        { key: 'action-left', label: 'Left command' },
-        { key: 'action-right', label: 'Right command' },
-        { key: 'action-up', label: 'Up command' },
-        { key: 'action-down', label: 'Down command' },
-    ];
-
-    commands.forEach(({ key, label }) => {
-        const entry = new Gtk.Entry({ text: settings.get_string(key) });
-        entry.connect('changed', () => settings.set_string(key, entry.get_text()));
-
-        const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, hexpand: true });
-        const labelWidget = new Gtk.Label({ label, xalign: 0, hexpand: true });
-        row.append(labelWidget);
-        row.append(entry);
-        box.append(row);
-    });
-
-    return box;
-}
-
-function init() {
-    return new Gtk.Box();
-}
-
-function buildPrefs() {
-    return buildPrefsWidget();
 }

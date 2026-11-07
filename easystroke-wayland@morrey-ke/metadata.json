@@ -9,6 +9,7 @@
     "48"
   ],
   "url": "https://github.com/morrey-Ke/easystroke-wayland",
-  "version": 1,
-  "gettext-domain": "easystroke-wayland"
+  "version": 2,
+  "gettext-domain": "easystroke-wayland",
+  "settings-schema": "org.gnome.shell.extensions.easystroke-wayland"
 }
