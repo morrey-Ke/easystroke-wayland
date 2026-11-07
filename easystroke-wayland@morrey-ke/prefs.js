@@ -1,4 +1,5 @@
 import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 import Gtk from 'gi://Gtk';
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
@@ -11,21 +12,30 @@ function gestureTitle(action) {
 }
 
 function acceleratorFromEvent(event) {
-    const keyval = event.get_keyval()[1];
-    const state = event.get_modifier_state();
-    const mask = Gtk.accelerator_get_default_mod_mask();
+    const [success, keyval] = event.get_keyval();
+    if (!success)
+        return null;
 
-    // Ignore modifier-only presses; wait for the user to press a non-modifier key.
-    if ([
+    const state = event.get_state();
+    const mask = Gtk.accelerator_get_default_mod_mask();
+    const modifiers = state & mask;
+    const key = Gdk.keyval_name(keyval);
+
+    if (!key)
+        return null;
+
+    const isModifier = [
         Gdk.KEY_Control_L, Gdk.KEY_Control_R,
         Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
         Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
         Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
         Gdk.KEY_Super_L, Gdk.KEY_Super_R,
-    ].includes(keyval))
+    ].includes(keyval);
+
+    if (isModifier)
         return null;
 
-    return Gtk.accelerator_name(keyval, state & mask);
+    return Gtk.accelerator_name(keyval, modifiers);
 }
 
 export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
