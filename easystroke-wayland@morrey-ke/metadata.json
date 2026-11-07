@@ -4,7 +4,7 @@
   "uuid": "easystroke-wayland@morrey-ke",
   "shell-version": ["45", "46", "47", "48"],
   "url": "https://github.com/morrey-Ke/easystroke-wayland",
-  "version": 3,
+  "version": 4,
   "gettext-domain": "easystroke-wayland",
   "settings-schema": "org.gnome.shell.extensions.easystroke-wayland"
 }

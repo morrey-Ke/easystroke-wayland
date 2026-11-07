@@ -5,10 +5,10 @@ import Shell from 'gi://Shell';
 import Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const ACTIONS = [
-    'left', 'right', 'up', 'down',
-    'left-right', 'up-down', 'up-left',
-];
+const DIRECTIONS = ['left', 'right', 'up', 'down'];
+const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
+    DIRECTIONS.map(second => `${first}-${second}`))];
+const PAUSE_THRESHOLD_MS = 350;
 
 export default class EasyStrokeWaylandExtension extends Extension {
     enable() {
@@ -21,7 +21,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
             this._triggerButton = this._settings.get_int('trigger-button');
             this._threshold = this._settings.get_int('trigger-threshold');
         });
-
         this._stageCapturedEventId = global.stage.connect(
             'captured-event',
             (_actor, event) => this._onCapturedEvent(event)
@@ -45,12 +44,10 @@ export default class EasyStrokeWaylandExtension extends Extension {
             global.stage.disconnect(this._stageCapturedEventId);
             this._stageCapturedEventId = 0;
         }
-
         if (this._settingsChangedId) {
             this._settings.disconnect(this._settingsChangedId);
             this._settingsChangedId = 0;
         }
-
         for (const action of ACTIONS)
             Main.wm.removeKeybinding(`shortcut-${action}`);
 
@@ -79,7 +76,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
         const [x, y] = event.get_coords();
         this._gesture = {
             button: this._triggerButton,
-            points: [{x, y}],
+            points: [{x, y, time: event.get_time()}],
         };
         return Clutter.EVENT_STOP;
     }
@@ -91,12 +88,12 @@ export default class EasyStrokeWaylandExtension extends Extension {
         const [x, y] = event.get_coords();
         const points = this._gesture.points;
         const previous = points[points.length - 1];
-
-        // Drop near-identical samples to keep the gesture path bounded and
-        // reduce noise from high-frequency pointer events.
-        if (Math.hypot(x - previous.x, y - previous.y) >= 2)
-            points.push({x, y});
-
+        if (Math.hypot(x - previous.x, y - previous.y) >= 2) {
+            points.push({x, y, time: event.get_time()});
+            // Avoid unbounded memory use during unusually long drags.
+            if (points.length > 2000)
+                points.splice(1, points.length - 1500);
+        }
         return Clutter.EVENT_STOP;
     }
 
@@ -108,7 +105,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
         this._gesture = null;
         if (action)
             this._runAction(action);
-
         return Clutter.EVENT_STOP;
     }
 
@@ -121,10 +117,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
 
         const t = Math.max(0, Math.min(1,
             ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
-        return Math.hypot(
-            point.x - (start.x + t * dx),
-            point.y - (start.y + t * dy)
-        );
+        return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
     }
 
     _simplify(points, tolerance) {
@@ -135,7 +128,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
         const end = points[points.length - 1];
         let farthestIndex = -1;
         let farthestDistance = tolerance;
-
         for (let i = 1; i < points.length - 1; i++) {
             const distance = this._pointLineDistance(points[i], start, end);
             if (distance > farthestDistance) {
@@ -143,7 +135,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
                 farthestIndex = i;
             }
         }
-
         if (farthestIndex === -1)
             return [start, end];
 
@@ -155,15 +146,25 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _directionBetween(start, end) {
         const dx = end.x - start.x;
         const dy = end.y - start.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance < Math.max(8, this._threshold * 0.25))
+        if (Math.hypot(dx, dy) < Math.max(8, this._threshold * 0.25))
             return null;
 
-        // Use the dominant axis to map each leg to one of the four cardinal
-        // directions, including diagonal pointer movement.
         if (Math.abs(dx) >= Math.abs(dy))
             return dx < 0 ? 'left' : 'right';
         return dy < 0 ? 'up' : 'down';
+    }
+
+    _directionsForChunk(points) {
+        const corners = this._simplify(points, Math.max(5, this._threshold * 0.2));
+        const directions = [];
+        for (let i = 1; i < corners.length; i++) {
+            const direction = this._directionBetween(corners[i - 1], corners[i]);
+            if (!direction)
+                continue;
+            if (directions.at(-1) !== direction)
+                directions.push(direction);
+        }
+        return directions;
     }
 
     _classifyGesture(points) {
@@ -176,18 +177,25 @@ export default class EasyStrokeWaylandExtension extends Extension {
         if (pathLength < this._threshold)
             return null;
 
-        const corners = this._simplify(points, Math.max(5, this._threshold * 0.2));
-        const directions = [];
-        for (let i = 1; i < corners.length; i++) {
-            const direction = this._directionBetween(corners[i - 1], corners[i]);
-            if (!direction)
-                continue;
-            if (directions.at(-1) !== direction)
-                directions.push(direction);
+        // A noticeable pause separates two consecutive directional strokes,
+        // allowing repeated pairs such as left-left to be distinguished from left.
+        const chunks = [[]];
+        for (let i = 0; i < points.length; i++) {
+            if (i > 0 && points[i].time - points[i - 1].time >= PAUSE_THRESHOLD_MS)
+                chunks.push([points[i - 1]]);
+            chunks[chunks.length - 1].push(points[i]);
         }
 
-        // Only configured one- and two-leg paths are accepted. This filters
-        // accidental scribbles and makes the action lookup unambiguous.
+        const directions = [];
+        for (const chunk of chunks) {
+            for (const direction of this._directionsForChunk(chunk)) {
+                if (directions.at(-1) !== direction)
+                    directions.push(direction);
+            }
+        }
+
+        if (directions.length < 1 || directions.length > 2)
+            return null;
         const action = directions.join('-');
         return ACTIONS.includes(action) ? action : null;
     }

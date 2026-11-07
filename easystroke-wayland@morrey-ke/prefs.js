@@ -2,10 +2,9 @@ import Adw from 'gi://Adw';
 import Gtk from 'gi://Gtk';
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const ACTIONS = [
-    'left', 'right', 'up', 'down',
-    'left-right', 'up-down', 'up-left',
-];
+const DIRECTIONS = ['left', 'right', 'up', 'down'];
+const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
+    DIRECTIONS.map(second => `${first}-${second}`))];
 
 function gestureTitle(action) {
     return action.split('-')
@@ -54,7 +53,7 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
 
         const actionsGroup = new Adw.PreferencesGroup({
             title: 'Gesture actions',
-            description: 'Configure commands for cardinal and two-part gestures. Clear a command to disable it.',
+            description: 'Configure commands for four cardinal gestures and all 16 ordered two-direction combinations. Clear a command to disable it.',
         });
         for (const action of ACTIONS) {
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} gesture`});

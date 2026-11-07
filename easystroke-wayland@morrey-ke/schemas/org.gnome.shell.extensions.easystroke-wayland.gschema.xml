@@ -1,31 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.easystroke-wayland" path="/org/gnome/shell/extensions/easystroke-wayland/">
-    <key type="i" name="trigger-button">
-      <default>3</default>
-      <summary>Mouse button used to start a gesture</summary>
-      <description>Button index used to begin drag tracking. 3 is the right mouse button.</description>
-    </key>
-    <key type="i" name="trigger-threshold">
-      <default>40</default>
-      <summary>Minimum total pointer travel for gesture recognition</summary>
-      <description>Smaller values make gestures easier to trigger; larger values reduce false positives.</description>
-    </key>
+    <key type="i" name="trigger-button"><default>3</default><summary>Mouse button used to start a gesture</summary><description>Button index used to begin drag tracking. 3 is the right mouse button.</description></key>
+    <key type="i" name="trigger-threshold"><default>40</default><summary>Minimum total pointer travel</summary><description>Minimum total pointer travel in pixels. Smaller values make gestures easier to trigger.</description></key>
 
-    <key type="s" name="action-left"><default>'gnome-terminal --'</default><summary>Command for a left gesture</summary></key>
-    <key type="s" name="action-right"><default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default><summary>Command for a right gesture</summary></key>
-    <key type="s" name="action-up"><default>'gnome-control-center'</default><summary>Command for an up gesture</summary></key>
-    <key type="s" name="action-down"><default>'nautilus ~'</default><summary>Command for a down gesture</summary></key>
-    <key type="s" name="action-left-right"><default>''</default><summary>Command for a left then right gesture</summary></key>
-    <key type="s" name="action-up-down"><default>''</default><summary>Command for an up then down gesture</summary></key>
-    <key type="s" name="action-up-left"><default>''</default><summary>Command for an up then left gesture</summary></key>
+    <key type="s" name="action-left"><default>'gnome-terminal --'</default><summary>Command for left</summary></key>
+    <key type="s" name="action-right"><default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default><summary>Command for right</summary></key>
+    <key type="s" name="action-up"><default>'gnome-control-center'</default><summary>Command for up</summary></key>
+    <key type="s" name="action-down"><default>'nautilus ~'</default><summary>Command for down</summary></key>
 
-    <key type="as" name="shortcut-left"><default>[]</default><summary>Keyboard shortcut for left action</summary></key>
-    <key type="as" name="shortcut-right"><default>[]</default><summary>Keyboard shortcut for right action</summary></key>
-    <key type="as" name="shortcut-up"><default>[]</default><summary>Keyboard shortcut for up action</summary></key>
-    <key type="as" name="shortcut-down"><default>[]</default><summary>Keyboard shortcut for down action</summary></key>
-    <key type="as" name="shortcut-left-right"><default>[]</default><summary>Keyboard shortcut for left then right action</summary></key>
-    <key type="as" name="shortcut-up-down"><default>[]</default><summary>Keyboard shortcut for up then down action</summary></key>
-    <key type="as" name="shortcut-up-left"><default>[]</default><summary>Keyboard shortcut for up then left action</summary></key>
+    <key type="s" name="action-left-left"><default>''</default><summary>Command for left then left</summary></key>
+    <key type="s" name="action-left-right"><default>''</default><summary>Command for left then right</summary></key>
+    <key type="s" name="action-left-up"><default>''</default><summary>Command for left then up</summary></key>
+    <key type="s" name="action-left-down"><default>''</default><summary>Command for left then down</summary></key>
+    <key type="s" name="action-right-left"><default>''</default><summary>Command for right then left</summary></key>
+    <key type="s" name="action-right-right"><default>''</default><summary>Command for right then right</summary></key>
+    <key type="s" name="action-right-up"><default>''</default><summary>Command for right then up</summary></key>
+    <key type="s" name="action-right-down"><default>''</default><summary>Command for right then down</summary></key>
+    <key type="s" name="action-up-left"><default>''</default><summary>Command for up then left</summary></key>
+    <key type="s" name="action-up-right"><default>''</default><summary>Command for up then right</summary></key>
+    <key type="s" name="action-up-up"><default>''</default><summary>Command for up then up</summary></key>
+    <key type="s" name="action-up-down"><default>''</default><summary>Command for up then down</summary></key>
+    <key type="s" name="action-down-left"><default>''</default><summary>Command for down then left</summary></key>
+    <key type="s" name="action-down-right"><default>''</default><summary>Command for down then right</summary></key>
+    <key type="s" name="action-down-up"><default>''</default><summary>Command for down then up</summary></key>
+    <key type="s" name="action-down-down"><default>''</default><summary>Command for down then down</summary></key>
+
+    <key type="as" name="shortcut-left"><default>[]</default><summary>Keyboard shortcut for left</summary></key>
+    <key type="as" name="shortcut-right"><default>[]</default><summary>Keyboard shortcut for right</summary></key>
+    <key type="as" name="shortcut-up"><default>[]</default><summary>Keyboard shortcut for up</summary></key>
+    <key type="as" name="shortcut-down"><default>[]</default><summary>Keyboard shortcut for down</summary></key>
+
+    <key type="as" name="shortcut-left-left"><default>[]</default><summary>Keyboard shortcut for left then left</summary></key>
+    <key type="as" name="shortcut-left-right"><default>[]</default><summary>Keyboard shortcut for left then right</summary></key>
+    <key type="as" name="shortcut-left-up"><default>[]</default><summary>Keyboard shortcut for left then up</summary></key>
+    <key type="as" name="shortcut-left-down"><default>[]</default><summary>Keyboard shortcut for left then down</summary></key>
+    <key type="as" name="shortcut-right-left"><default>[]</default><summary>Keyboard shortcut for right then left</summary></key>
+    <key type="as" name="shortcut-right-right"><default>[]</default><summary>Keyboard shortcut for right then right</summary></key>
+    <key type="as" name="shortcut-right-up"><default>[]</default><summary>Keyboard shortcut for right then up</summary></key>
+    <key type="as" name="shortcut-right-down"><default>[]</default><summary>Keyboard shortcut for right then down</summary></key>
+    <key type="as" name="shortcut-up-left"><default>[]</default><summary>Keyboard shortcut for up then left</summary></key>
+    <key type="as" name="shortcut-up-right"><default>[]</default><summary>Keyboard shortcut for up then right</summary></key>
+    <key type="as" name="shortcut-up-up"><default>[]</default><summary>Keyboard shortcut for up then up</summary></key>
+    <key type="as" name="shortcut-up-down"><default>[]</default><summary>Keyboard shortcut for up then down</summary></key>
+    <key type="as" name="shortcut-down-left"><default>[]</default><summary>Keyboard shortcut for down then left</summary></key>
+    <key type="as" name="shortcut-down-right"><default>[]</default><summary>Keyboard shortcut for down then right</summary></key>
+    <key type="as" name="shortcut-down-up"><default>[]</default><summary>Keyboard shortcut for down then up</summary></key>
+    <key type="as" name="shortcut-down-down"><default>[]</default><summary>Keyboard shortcut for down then down</summary></key>
   </schema>
 </schemalist>

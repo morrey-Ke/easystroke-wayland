@@ -1,16 +1,15 @@
 # EasyStroke Wayland for GNOME Shell
 
-An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter, including Wayland sessions. It uses GNOME Shell's ES-module extension API.
+An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter on Wayland, using GNOME Shell's ES-module extension API.
 
 ## Features
 
 - Four straight gestures: left, right, up, and down.
-- Two-leg gestures: left → right, up → down, and up → left.
-- Configurable commands for all seven gestures.
-- Optional GNOME keyboard shortcuts for each action; gestures and shortcuts invoke the same command.
-- Configurable trigger button and minimum pointer travel.
+- All 16 ordered two-direction combinations (4 × 4), including repeated directions such as left → left.
+- Custom commands and optional GNOME keyboard shortcuts for each gesture.
+- Configurable trigger button and minimum total pointer travel.
 
-The recognizer simplifies the pointer path before detecting legs to reduce motion noise. It accepts only the listed one- and two-leg patterns. The default trigger is mouse button 3 (right button); its press, motion, and release are consumed while tracking.
+Draw a two-leg gesture with a clear turn. To enter the same direction twice (for example left → left), pause briefly between the two strokes while keeping the trigger button held. The pause threshold is 350 ms. The gesture trigger defaults to mouse button 3 (right button), and its press, motion, and release are consumed while tracking.
 
 ## Wayland limitation
 
@@ -33,9 +32,9 @@ If installing for the first time, log out and back in if the extension is not di
 
 ## Configure and test
 
-In preferences, configure commands for each gesture. For example, set the left-right command to `notify-send 'Gesture test' 'Left then right'` (requires `libnotify`). Enter keyboard accelerators such as `<Control><Alt>Left` in the matching shortcut row. Clear a command to disable its action, or clear a shortcut field to unregister its shortcut. Commands are user-configured shell commands; only enter commands you trust.
+Set gesture commands and optional shortcuts in preferences. For a harmless test, set an action to `notify-send 'Gesture test' 'Left then right'` (requires `libnotify`). Shortcut accelerators use syntax such as `<Control><Alt>Left`; clear a shortcut field to disable it. Commands are user-configured shell commands; only enter commands you trust.
 
-Hold the trigger button and draw a clear path with legs in the named directions. For left-right, draw a horizontal leg left then reverse to the right; for up-down, draw upward and reverse downward; for up-left, draw upward then left. Each path must exceed the minimum total distance and have a visible turn.
+For the repeated-direction combinations, pause for at least 350 ms between strokes while holding the mouse button. For other combinations, make a distinct turn in the indicated directions. Gestures are rejected if they contain more than two recognized directional legs.
 
 ## Development checks
 
@@ -44,4 +43,4 @@ python -m json.tool easystroke-wayland@morrey-ke/metadata.json >/dev/null
 glib-compile-schemas --strict --dry-run easystroke-wayland@morrey-ke/schemas
 ```
 
-Test on each supported GNOME Shell version in `metadata.json`; this repository does not include an automated Shell integration environment.
+Test on the GNOME Shell versions listed in `metadata.json`; this repository does not include an automated Shell integration environment.
