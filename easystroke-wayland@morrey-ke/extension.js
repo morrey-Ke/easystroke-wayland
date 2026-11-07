@@ -1,22 +1,15 @@
 import Clutter from 'gi://Clutter';
-import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import GLib from 'gi://GLib';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
 const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
     DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
 const PAUSE_THRESHOLD_MS = 350;
-const MODIFIER_KEYVALS = {
-    Control: Gdk.KEY_Control_L,
-    Primary: Gdk.KEY_Control_L,
-    Shift: Gdk.KEY_Shift_L,
-    Alt: Gdk.KEY_Alt_L,
-    Super: Gdk.KEY_Super_L,
-    Meta: Gdk.KEY_Meta_L,
-    Hyper: Gdk.KEY_Hyper_L,
-};
+const BROWSER_ACTIONS = new Set([
+    'new-tab', 'back', 'forward', 'reload', 'close-tab', 'new-window',
+]);
 
 export default class EasyStrokeWaylandExtension extends Extension {
     enable() {
@@ -30,14 +23,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
             this._threshold = this._settings.get_int('trigger-threshold');
         });
         this._stageCapturedEventId = global.stage.connect('captured-event', (_actor, event) => this._onCapturedEvent(event));
-
-        try {
-            const seat = Clutter.get_default_backend().get_default_seat();
-            this._virtualKeyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD);
-        } catch (error) {
-            this._virtualKeyboard = null;
-            console.error(`[${this.uuid}] Could not create virtual keyboard: ${error.message}`);
-        }
         console.debug(`[${this.uuid}] enabled`);
     }
 
@@ -51,7 +36,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
             this._settingsChangedId = 0;
         }
         this._gesture = null;
-        this._virtualKeyboard = null;
         this._mouseSettings = null;
         this._settings = null;
         console.debug(`[${this.uuid}] disabled`);
@@ -82,7 +66,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _onButtonPress(event) {
         if (this._gesture || !this._matchesTrigger(event.get_button()))
             return Clutter.EVENT_PROPAGATE;
-
         const [x, y] = event.get_coords();
         this._gesture = {
             button: event.get_button(),
@@ -96,7 +79,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _onMotion(event) {
         if (!this._gesture)
             return Clutter.EVENT_PROPAGATE;
-
         const [x, y] = event.get_coords();
         const points = this._gesture.points;
         const previous = points[points.length - 1];
@@ -109,14 +91,12 @@ export default class EasyStrokeWaylandExtension extends Extension {
         }
         if (this._gesture.distance >= this._threshold)
             this._gesture.moved = true;
-
         return Clutter.EVENT_PROPAGATE;
     }
 
     _onButtonRelease(event) {
         if (!this._gesture || event.get_button() !== this._gesture.button)
             return Clutter.EVENT_PROPAGATE;
-
         const gesture = this._gesture;
         this._gesture = null;
         if (gesture.moved) {
@@ -198,58 +178,52 @@ export default class EasyStrokeWaylandExtension extends Extension {
         return ACTIONS.includes(action) ? action : null;
     }
 
-    _sendShortcut(accelerator) {
-        if (!this._virtualKeyboard || !accelerator)
-            return;
+    _focusedBrowser() {
+        const window = global.display.focus_window;
+        const wmClass = window?.get_wm_class()?.toLowerCase() ?? '';
+        const title = window?.get_title()?.toLowerCase() ?? '';
+        if (wmClass.includes('floorp') || title.includes('floorp'))
+            return 'floorp';
+        if (wmClass.includes('firefox') || title.includes('firefox'))
+            return 'firefox';
+        return null;
+    }
 
-        const modifiers = [];
-        const tokenPattern = /<([^>]+)>/g;
-        let match;
-        while ((match = tokenPattern.exec(accelerator)) !== null) {
-            const keyval = MODIFIER_KEYVALS[match[1]];
-            if (!keyval) {
-                console.warn(`[${this.uuid}] Unsupported shortcut modifier: ${match[1]}`);
-                return;
-            }
-            if (!modifiers.includes(keyval))
-                modifiers.push(keyval);
+    _sendBrowserAction(action) {
+        if (!BROWSER_ACTIONS.has(action))
+            return false;
+        const browser = this._focusedBrowser();
+        if (!browser) {
+            console.warn(`[${this.uuid}] Browser action ignored: the focused window is not Firefox or Floorp`);
+            return false;
         }
 
-        const keyName = accelerator.replace(/<[^>]+>/g, '').trim();
-        const keyval = Gdk.keyval_from_name(keyName);
-        if (!keyval) {
-            console.warn(`[${this.uuid}] Could not parse shortcut: ${accelerator}`);
-            return;
-        }
-
-        const time = Clutter.get_current_event_time();
+        const helper = GLib.build_filenamev([this.path, 'browser-bridge', 'native-host.py']);
         try {
-            for (const modifier of modifiers)
-                this._virtualKeyboard.notify_keyval(time, modifier, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, keyval, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, keyval, Clutter.KeyState.RELEASED);
-            for (const modifier of modifiers.slice().reverse())
-                this._virtualKeyboard.notify_keyval(time, modifier, Clutter.KeyState.RELEASED);
+            Gio.Subprocess.new([
+                '/usr/bin/python3', helper, '--send', browser, action,
+            ], Gio.SubprocessFlags.NONE);
+            return true;
         } catch (error) {
-            console.error(`[${this.uuid}] Could not send shortcut ${accelerator}: ${error.message}`);
+            console.error(`[${this.uuid}] Could not send ${action} to ${browser}: ${error.message}`);
+            return false;
         }
     }
 
     _runAction(action) {
         if (!ACTIONS.includes(action))
             return;
-
         const command = this._settings.get_string(`action-${action}`).trim();
-        if (command) {
-            try {
-                Gio.Subprocess.new(['/bin/sh', '-c', command], Gio.SubprocessFlags.NONE);
-            } catch (error) {
-                console.error(`[${this.uuid}] Could not launch ${action} command: ${error.message}`);
-            }
+        if (command.startsWith('browser:')) {
+            this._sendBrowserAction(command.slice('browser:'.length).trim());
+            return;
         }
-
-        const shortcut = this._settings.get_strv(`shortcut-${action}`)[0] ?? '';
-        if (shortcut)
-            this._sendShortcut(shortcut);
+        if (!command)
+            return;
+        try {
+            Gio.Subprocess.new(['/bin/sh', '-c', command], Gio.SubprocessFlags.NONE);
+        } catch (error) {
+            console.error(`[${this.uuid}] Could not launch ${action} command: ${error.message}`);
+        }
     }
 }

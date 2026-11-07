@@ -1,15 +1,12 @@
 # EasyStroke Wayland for GNOME Shell
 
-An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter on Wayland, using GNOME Shell's ES-module extension API.
+An Easystroke-inspired mouse-gesture extension for GNOME Shell/Mutter on Wayland.
 
-## Features
+## Firefox and Floorp actions
 
-- Four straight gestures and 12 ordered two-direction combinations with different directions (same-direction pairs are excluded).
-- Configurable commands and optional GNOME global keyboard shortcuts for each gesture.
-- To set a shortcut, focus its field and press the keys directly (for example Ctrl+R or Alt+Left). Backspace/Delete clears the shortcut.
-- Configurable mouse trigger button and minimum pointer travel.
+To use a gesture for browser actions such as opening a tab, going back/forward, or reloading, install the companion bridge described in [`browser-bridge/README.md`](browser-bridge/README.md). Set the gesture's command to `browser:new-tab`, `browser:back`, `browser:forward`, `browser:reload`, `browser:close-tab`, or `browser:new-window`. The focused Firefox or Floorp window receives the action through WebExtension APIs; no fake keyboard input is used.
 
-## Install
+## Install the GNOME extension
 
 ```sh
 git clone https://github.com/morrey-Ke/easystroke-wayland.git
@@ -24,13 +21,6 @@ gnome-extensions prefs easystroke-wayland@morrey-ke
 
 On Wayland, log out and back in after installing or updating extension code.
 
-## Notes
+## Other gesture commands
 
-The extension runs only in GNOME Shell/Mutter. Gesture commands are user-configured shell commands; only enter commands you trust. For a harmless test, use `notify-send 'Gesture test' left` (requires `libnotify`).
-
-Check the schema and JSON before installing:
-
-```sh
-glib-compile-schemas --strict --dry-run easystroke-wayland@morrey-ke/schemas
-python -m json.tool easystroke-wayland@morrey-ke/metadata.json >/dev/null
-```
+Any gesture command that is not one of the `browser:` actions is run as a shell command. Only enter commands you trust.

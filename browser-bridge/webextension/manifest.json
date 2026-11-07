@@ -1,0 +1,16 @@
+{
+  "manifest_version": 2,
+  "name": "EasyStroke Wayland Browser Bridge",
+  "version": "1.0.0",
+  "description": "Runs browser tab actions requested by the EasyStroke Wayland GNOME extension.",
+  "permissions": ["nativeMessaging", "tabs"],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "easystroke-browser@morrey-ke"
+    }
+  }
+}

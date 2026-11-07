@@ -1,0 +1,8 @@
+{
+  "name": "org.easystroke.wayland",
+  "description": "EasyStroke Wayland gesture actions for Firefox and Floorp",
+  "path": "/REPLACE/WITH/INSTALLED/PATH/native-host.py",
+  "type": "stdio",
+  "allowed_extensions": ["easystroke-browser@morrey-ke"],
+  "args": ["firefox"]
+}
