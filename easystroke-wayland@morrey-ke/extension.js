@@ -24,8 +24,11 @@ export default class EasyStrokeWaylandExtension extends Extension {
 
         for (const action of ACTIONS) {
             Main.wm.addKeybinding(
-                `shortcut-${action}`, this._settings, Meta.KeyBindingFlags.NONE,
-                Shell.ActionMode.ALL, () => this._runAction(action)
+                `shortcut-${action}`,
+                this._settings,
+                Meta.KeyBindingFlags.NONE,
+                Shell.ActionMode.ALL,
+                () => this._runAction(action)
             );
         }
         console.debug(`[${this.uuid}] enabled`);
@@ -61,16 +64,10 @@ export default class EasyStrokeWaylandExtension extends Extension {
     }
 
     _onButtonPress(event) {
-        const button = event.get_button();
-        const leftHanded = this._mouseSettings?.get_boolean('left-handed') ?? false;
-        const isTrigger = button === this._triggerButton ||
-            (leftHanded && ((button === 1 && this._triggerButton === 3) ||
-                (button === 3 && this._triggerButton === 1)));
-        if (!isTrigger)
+        if (event.get_button() !== this._triggerButton)
             return Clutter.EVENT_PROPAGATE;
-
         const [x, y] = event.get_coords();
-        this._gesture = {button, points: [{x, y, time: event.get_time()}]};
+        this._gesture = {button: this._triggerButton, points: [{x, y, time: event.get_time()}]};
         return Clutter.EVENT_STOP;
     }
 

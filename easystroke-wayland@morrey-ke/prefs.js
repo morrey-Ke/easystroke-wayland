@@ -23,16 +23,17 @@ function isModifierKey(keyval) {
     ].includes(keyval);
 }
 
-function connectShortcutCapture(entry, settings, settingKey) {
+function addShortcutCapture(entry, settings, key) {
     const controller = new Gtk.EventControllerKey();
+    controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
     controller.connect('key-pressed', (_controller, keyval, _keycode, state) => {
         if (keyval === Gdk.KEY_BackSpace || keyval === Gdk.KEY_Delete) {
             entry.set_text('');
-            settings.set_strv(settingKey, []);
+            settings.set_strv(key, []);
             return true;
         }
 
-        // Escape cancels the current key press and leaves the saved shortcut unchanged.
+        // Escape cancels capture without changing the saved keybinding.
         if (keyval === Gdk.KEY_Escape || isModifierKey(keyval))
             return true;
 
@@ -43,7 +44,7 @@ function connectShortcutCapture(entry, settings, settingKey) {
         const accelerator = Gtk.accelerator_name(keyval, modifiers);
         if (accelerator) {
             entry.set_text(accelerator);
-            settings.set_strv(settingKey, [accelerator]);
+            settings.set_strv(key, [accelerator]);
         }
         return true;
     });
@@ -105,46 +106,43 @@ export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
 
         const actionsGroup = new Adw.PreferencesGroup({
             title: 'Gesture actions',
-            description: 'Configure commands for cardinal gestures and ordered two-direction combinations with different directions.',
+            description: 'Each gesture can run a command, a keyboard shortcut, or both. Leave either field blank to disable that option.',
         });
         for (const action of ACTIONS) {
             const row = new Adw.ActionRow({title: `${gestureTitle(action)} gesture`});
-            const entry = new Gtk.Entry({
-                text: settings.get_string(`action-${action}`),
-                placeholder_text: 'Shell command (leave blank to disable)',
+            const fields = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL,
+                spacing: 8,
                 hexpand: true,
                 valign: Gtk.Align.CENTER,
             });
-            entry.set_width_chars(32);
-            entry.connect('changed', () =>
-                settings.set_string(`action-${action}`, entry.get_text()));
-            row.add_suffix(entry);
+            const commandEntry = new Gtk.Entry({
+                text: settings.get_string(`action-${action}`),
+                placeholder_text: 'Command (optional)',
+                hexpand: true,
+                width_chars: 24,
+            });
+            commandEntry.set_tooltip_text('Shell command to run for this gesture');
+            commandEntry.connect('changed', () =>
+                settings.set_string(`action-${action}`, commandEntry.get_text()));
+
+            const shortcutKey = `shortcut-${action}`;
+            const shortcutEntry = new Gtk.Entry({
+                text: settings.get_strv(shortcutKey)[0] ?? '',
+                placeholder_text: 'Shortcut (optional)',
+                editable: false,
+                can_focus: true,
+                width_chars: 18,
+            });
+            shortcutEntry.set_tooltip_text('Focus and press a key combination; Backspace/Delete clears it');
+            addShortcutCapture(shortcutEntry, settings, shortcutKey);
+
+            fields.append(commandEntry);
+            fields.append(shortcutEntry);
+            row.add_suffix(fields);
             actionsGroup.add(row);
         }
         page.add(actionsGroup);
-
-        const shortcutsGroup = new Adw.PreferencesGroup({
-            title: 'Keyboard shortcuts',
-            description: 'Focus a field and press the desired combination (for example Ctrl+R or Alt+Left). Backspace/Delete clears it; Escape cancels.',
-        });
-        for (const action of ACTIONS) {
-            const settingKey = `shortcut-${action}`;
-            const row = new Adw.ActionRow({title: `${gestureTitle(action)} action`});
-            const entry = new Gtk.Entry({
-                text: settings.get_strv(settingKey)[0] ?? '',
-                placeholder_text: 'Click here, then press keys…',
-                editable: false,
-                can_focus: true,
-                hexpand: true,
-                valign: Gtk.Align.CENTER,
-            });
-            entry.set_width_chars(28);
-            connectShortcutCapture(entry, settings, settingKey);
-            row.add_suffix(entry);
-            shortcutsGroup.add(row);
-        }
-        page.add(shortcutsGroup);
-
         window.add(page);
     }
 }
