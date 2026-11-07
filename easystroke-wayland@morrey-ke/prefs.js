@@ -1,127 +1,109 @@
-import Adw from 'gi://Adw';
-import Gdk from 'gi://Gdk';
-import Gtk from 'gi://Gtk';
-import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+const { Adw, Gio, Gtk } = imports.gi;
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
 
-const DIRECTIONS = ['left', 'right', 'up', 'down'];
-const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
-    DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
+function getSettings() {
+    const schemaDir = Me.dir.get_child('schemas');
+    if (!schemaDir.query_exists(null))
+        throw new Error('Schema directory not found');
 
-function gestureTitle(action) {
-    return action.split('-').map(direction => direction[0].toUpperCase() + direction.slice(1)).join(' → ');
+    const source = Gio.SettingsSchemaSource.new_from_directory(
+        schemaDir.get_path(),
+        Gio.SettingsSchemaSource.get_default(),
+        false,
+        null
+    );
+
+    const schema = source.lookup('org.gnome.shell.extensions.easystroke-wayland', true);
+    if (!schema)
+        throw new Error('Schema not found');
+
+    return new Gio.Settings({ settings_schema: schema });
 }
 
-function isModifierKey(keyval) {
-    return [
-        Gdk.KEY_Control_L, Gdk.KEY_Control_R,
-        Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
-        Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
-        Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
-        Gdk.KEY_Super_L, Gdk.KEY_Super_R,
-        Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R,
-    ].includes(keyval);
-}
-
-function captureAccelerator(entry, settings, key) {
-    const controller = new Gtk.EventControllerKey();
-    controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
-    controller.connect('key-pressed', (_controller, keyval, _keycode, state) => {
-        if (keyval === Gdk.KEY_BackSpace || keyval === Gdk.KEY_Delete) {
-            entry.set_text('');
-            settings.set_strv(key, []);
-            return true;
-        }
-
-        if (keyval === Gdk.KEY_Escape)
-            return true;
-
-        if (isModifierKey(keyval))
-            return true;
-
-        const modifiers = state & Gtk.accelerator_get_default_mod_mask();
-        if (!Gtk.accelerator_valid(keyval, modifiers))
-            return true;
-
-        const accelerator = Gtk.accelerator_name(keyval, modifiers);
-        if (accelerator) {
-            entry.set_text(accelerator);
-            settings.set_strv(key, [accelerator]);
-        }
-        return true;
+function buildPrefsWidget() {
+    const settings = getSettings();
+    const box = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 12,
+        margin_top: 18,
+        margin_bottom: 18,
+        margin_start: 18,
+        margin_end: 18,
+        hexpand: true,
+        vexpand: true,
     });
-    entry.add_controller(controller);
+
+    const heading = new Gtk.Label({
+        label: '<b>EasyStroke Wayland</b>',
+        use_markup: true,
+        xalign: 0,
+    });
+    box.append(heading);
+
+    const triggerButton = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({ lower: 1, upper: 16, step_increment: 1, value: settings.get_int('trigger-button') }),
+        numeric: true,
+    });
+    triggerButton.connect('value-changed', () => {
+        settings.set_int('trigger-button', triggerButton.get_value_as_int());
+    });
+
+    const threshold = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({ lower: 10, upper: 300, step_increment: 5, value: settings.get_int('trigger-threshold') }),
+        numeric: true,
+    });
+    threshold.connect('value-changed', () => {
+        settings.set_int('trigger-threshold', threshold.get_value_as_int());
+    });
+
+    const rows = [
+        { label: 'Gesture trigger button', widget: triggerButton },
+        { label: 'Minimum gesture distance', widget: threshold },
+    ];
+
+    rows.forEach(({ label, widget }) => {
+        const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, hexpand: true });
+        const labelWidget = new Gtk.Label({ label, xalign: 0, hexpand: true });
+        row.append(labelWidget);
+        row.append(widget);
+        box.append(row);
+    });
+
+    const note = new Gtk.Label({
+        label: 'Left-handed mouse mode is detected automatically; the configured button is interpreted as the logical button, not the physical one.',
+        xalign: 0,
+        wrap: true,
+        selectable: true,
+        margin_top: 4,
+    });
+    box.append(note);
+
+    const commands = [
+        { key: 'action-left', label: 'Left command' },
+        { key: 'action-right', label: 'Right command' },
+        { key: 'action-up', label: 'Up command' },
+        { key: 'action-down', label: 'Down command' },
+    ];
+
+    commands.forEach(({ key, label }) => {
+        const entry = new Gtk.Entry({ text: settings.get_string(key) });
+        entry.connect('changed', () => settings.set_string(key, entry.get_text()));
+
+        const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, hexpand: true });
+        const labelWidget = new Gtk.Label({ label, xalign: 0, hexpand: true });
+        row.append(labelWidget);
+        row.append(entry);
+        box.append(row);
+    });
+
+    return box;
 }
 
-export default class EasyStrokeWaylandPreferences extends ExtensionPreferences {
-    fillPreferencesWindow(window) {
-        const settings = this.getSettings();
-        const page = new Adw.PreferencesPage({title: 'Gestures', icon_name: 'input-mouse-symbolic'});
-        const behaviorGroup = new Adw.PreferencesGroup({
-            title: 'Gesture behavior',
-            description: 'Choose the mouse button and minimum pointer travel for a gesture.',
-        });
+function init() {
+    return new Gtk.Box();
+}
 
-        const buttonRow = new Adw.ActionRow({title: 'Trigger button', subtitle: '3 is the right mouse button'});
-        const buttonSpin = new Gtk.SpinButton({
-            adjustment: new Gtk.Adjustment({lower: 1, upper: 16, step_increment: 1, page_increment: 1, value: settings.get_int('trigger-button')}),
-            numeric: true,
-            valign: Gtk.Align.CENTER,
-        });
-        buttonSpin.connect('value-changed', () => settings.set_int('trigger-button', buttonSpin.get_value_as_int()));
-        buttonRow.add_suffix(buttonSpin);
-        behaviorGroup.add(buttonRow);
-
-        const thresholdRow = new Adw.ActionRow({title: 'Minimum gesture distance', subtitle: 'Minimum total pointer travel in pixels'});
-        const thresholdSpin = new Gtk.SpinButton({
-            adjustment: new Gtk.Adjustment({lower: 10, upper: 300, step_increment: 5, page_increment: 20, value: settings.get_int('trigger-threshold')}),
-            numeric: true,
-            valign: Gtk.Align.CENTER,
-        });
-        thresholdSpin.connect('value-changed', () => settings.set_int('trigger-threshold', thresholdSpin.get_value_as_int()));
-        thresholdRow.add_suffix(thresholdSpin);
-        behaviorGroup.add(thresholdRow);
-        page.add(behaviorGroup);
-
-        const actionsGroup = new Adw.PreferencesGroup({
-            title: 'Gesture actions',
-            description: 'Commands for four cardinal gestures and 12 ordered pairs with different directions.',
-        });
-        for (const action of ACTIONS) {
-            const row = new Adw.ActionRow({title: `${gestureTitle(action)} gesture`});
-            const entry = new Gtk.Entry({
-                text: settings.get_string(`action-${action}`),
-                placeholder_text: 'Shell command (leave blank to disable)',
-                hexpand: true,
-                valign: Gtk.Align.CENTER,
-            });
-            entry.set_width_chars(32);
-            entry.connect('changed', () => settings.set_string(`action-${action}`, entry.get_text()));
-            row.add_suffix(entry);
-            actionsGroup.add(row);
-        }
-        page.add(actionsGroup);
-
-        const shortcutsGroup = new Adw.PreferencesGroup({
-            title: 'Keyboard shortcuts',
-            description: 'Focus a shortcut field and press your desired combination (for example Ctrl+R or Alt+Left). Backspace/Delete clears it; Escape cancels a key press.',
-        });
-        for (const action of ACTIONS) {
-            const key = `shortcut-${action}`;
-            const row = new Adw.ActionRow({title: `${gestureTitle(action)} action`});
-            const entry = new Gtk.Entry({
-                text: settings.get_strv(key)[0] ?? '',
-                placeholder_text: 'Click here, then press keys…',
-                editable: false,
-                can_focus: true,
-                hexpand: true,
-                valign: Gtk.Align.CENTER,
-            });
-            entry.set_width_chars(28);
-            captureAccelerator(entry, settings, key);
-            row.add_suffix(entry);
-            shortcutsGroup.add(row);
-        }
-        page.add(shortcutsGroup);
-        window.add(page);
-    }
+function buildPrefs() {
+    return buildPrefsWidget();
 }
