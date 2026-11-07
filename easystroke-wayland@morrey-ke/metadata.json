@@ -2,14 +2,9 @@
   "name": "EasyStroke Wayland",
   "description": "An Easystroke-inspired gesture extension for GNOME Shell / Mutter on Wayland.",
   "uuid": "easystroke-wayland@morrey-ke",
-  "shell-version": [
-    "45",
-    "46",
-    "47",
-    "48"
-  ],
+  "shell-version": ["45", "46", "47", "48"],
   "url": "https://github.com/morrey-Ke/easystroke-wayland",
-  "version": 2,
+  "version": 3,
   "gettext-domain": "easystroke-wayland",
   "settings-schema": "org.gnome.shell.extensions.easystroke-wayland"
 }

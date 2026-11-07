@@ -6,31 +6,26 @@
       <summary>Mouse button used to start a gesture</summary>
       <description>Button index used to begin drag tracking. 3 is the right mouse button.</description>
     </key>
-
     <key type="i" name="trigger-threshold">
       <default>40</default>
-      <summary>Minimum pointer travel distance for gesture recognition</summary>
-      <description>Smaller values make the gesture easier to trigger. Larger values reduce false positives.</description>
+      <summary>Minimum total pointer travel for gesture recognition</summary>
+      <description>Smaller values make gestures easier to trigger; larger values reduce false positives.</description>
     </key>
 
-    <key type="s" name="action-left">
-      <default>'gnome-terminal --'</default>
-      <summary>Command to run for a left swipe</summary>
-    </key>
+    <key type="s" name="action-left"><default>'gnome-terminal --'</default><summary>Command for a left gesture</summary></key>
+    <key type="s" name="action-right"><default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default><summary>Command for a right gesture</summary></key>
+    <key type="s" name="action-up"><default>'gnome-control-center'</default><summary>Command for an up gesture</summary></key>
+    <key type="s" name="action-down"><default>'nautilus ~'</default><summary>Command for a down gesture</summary></key>
+    <key type="s" name="action-left-right"><default>''</default><summary>Command for a left then right gesture</summary></key>
+    <key type="s" name="action-up-down"><default>''</default><summary>Command for an up then down gesture</summary></key>
+    <key type="s" name="action-up-left"><default>''</default><summary>Command for an up then left gesture</summary></key>
 
-    <key type="s" name="action-right">
-      <default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default>
-      <summary>Command to run for a right swipe</summary>
-    </key>
-
-    <key type="s" name="action-up">
-      <default>'gnome-control-center'</default>
-      <summary>Command to run for an upward swipe</summary>
-    </key>
-
-    <key type="s" name="action-down">
-      <default>'nautilus ~'</default>
-      <summary>Command to run for a downward swipe</summary>
-    </key>
+    <key type="as" name="shortcut-left"><default>[]</default><summary>Keyboard shortcut for left action</summary></key>
+    <key type="as" name="shortcut-right"><default>[]</default><summary>Keyboard shortcut for right action</summary></key>
+    <key type="as" name="shortcut-up"><default>[]</default><summary>Keyboard shortcut for up action</summary></key>
+    <key type="as" name="shortcut-down"><default>[]</default><summary>Keyboard shortcut for down action</summary></key>
+    <key type="as" name="shortcut-left-right"><default>[]</default><summary>Keyboard shortcut for left then right action</summary></key>
+    <key type="as" name="shortcut-up-down"><default>[]</default><summary>Keyboard shortcut for up then down action</summary></key>
+    <key type="as" name="shortcut-up-left"><default>[]</default><summary>Keyboard shortcut for up then left action</summary></key>
   </schema>
 </schemalist>
