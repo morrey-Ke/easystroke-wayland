@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.easystroke-wayland" path="/org/gnome/shell/extensions/easystroke-wayland/">
+    <key type="i" name="trigger-button">
+      <default>3</default>
+      <summary>Mouse button used to start a gesture</summary>
+      <description>Button index used to begin drag tracking. 3 is the right mouse button.</description>
+    </key>
+
+    <key type="i" name="trigger-threshold">
+      <default>40</default>
+      <summary>Minimum pointer travel distance for gesture recognition</summary>
+      <description>Smaller values make the gesture easier to trigger. Larger values reduce false positives.</description>
+    </key>
+
+    <key type="s" name="action-left">
+      <default>'gnome-terminal --'</default>
+      <summary>Command to run for a left swipe</summary>
+    </key>
+
+    <key type="s" name="action-right">
+      <default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default>
+      <summary>Command to run for a right swipe</summary>
+    </key>
+
+    <key type="s" name="action-up">
+      <default>'gnome-control-center'</default>
+      <summary>Command to run for an upward swipe</summary>
+    </key>
+
+    <key type="s" name="action-down">
+      <default>'nautilus ~'</default>
+      <summary>Command to run for a downward swipe</summary>
+    </key>
+  </schema>
+</schemalist>
