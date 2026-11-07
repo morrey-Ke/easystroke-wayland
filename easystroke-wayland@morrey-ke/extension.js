@@ -3,12 +3,10 @@ const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-let _mouseSettings = null;
-
 function getMouseSettings() {
-    if (!_mouseSettings)
-        _mouseSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.peripherals.mouse' });
-    return _mouseSettings;
+    if (!getMouseSettings._settings)
+        getMouseSettings._settings = new Gio.Settings({ schema_id: 'org.gnome.desktop.peripherals.mouse' });
+    return getMouseSettings._settings;
 }
 
 const DEFAULT_ACTIONS = {
@@ -33,15 +31,16 @@ class EasyStrokeWayland {
         log(`[EasyStrokeWayland] ${message}`);
     }
 
-    _resolveButton(button) {
-        if (button !== 1 && button !== 3)
-            return button;
+    _matchesTrigger(button) {
+        const trigger = this._triggerButton;
+        if (button === trigger)
+            return true;
 
         const leftHanded = getMouseSettings().get_boolean('left-handed');
         if (!leftHanded)
-            return button;
+            return false;
 
-        return button === 1 ? 3 : 1;
+        return (button === 1 && trigger === 3) || (button === 3 && trigger === 1);
     }
 
     _readSettings() {
@@ -99,15 +98,15 @@ class EasyStrokeWayland {
     }
 
     _maybeStartGesture(event) {
-        const button = this._resolveButton(event.get_button());
-        if (button !== this._triggerButton)
+        const button = event.get_button();
+        if (!this._matchesTrigger(button))
             return Clutter.EVENT_PROPAGATE;
 
         const [x, y] = event.get_coords();
         this._gestureActive = true;
         this._gestureStart = { x, y };
         this._points = [{ x, y }];
-        this._log(`Gesture started with logical button ${button} at (${x}, ${y})`);
+        this._log(`Gesture started with raw button ${button}, left-handed=${getMouseSettings().get_boolean('left-handed')} at (${x}, ${y})`);
         return Clutter.EVENT_STOP;
     }
 
@@ -124,8 +123,8 @@ class EasyStrokeWayland {
         if (!this._gestureActive)
             return Clutter.EVENT_PROPAGATE;
 
-        const button = this._resolveButton(event.get_button());
-        if (button !== this._triggerButton)
+        const button = event.get_button();
+        if (!this._matchesTrigger(button))
             return Clutter.EVENT_PROPAGATE;
 
         const gesture = this._classifyGesture(this._points);
