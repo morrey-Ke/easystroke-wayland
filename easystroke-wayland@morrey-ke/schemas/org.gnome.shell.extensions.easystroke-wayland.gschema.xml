@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.easystroke-wayland" path="/org/gnome/shell/extensions/easystroke-wayland/">
-    <key type="i" name="trigger-button"><default>3</default><summary>Mouse button used to start a gesture</summary><description>Button index used to begin drag tracking. 3 is the right mouse button.</description></key>
-    <key type="i" name="trigger-threshold"><default>40</default><summary>Minimum total pointer travel</summary><description>Minimum total pointer travel in pixels.</description></key>
+    <key type="i" name="trigger-button"><default>3</default><summary>Mouse button used to start a gesture</summary><description>Button index for starting drag tracking; 3 is the right mouse button.</description></key>
+    <key type="i" name="trigger-threshold"><default>40</default><summary>Minimum gesture travel</summary><description>Minimum total pointer travel in pixels.</description></key>
 
     <key type="s" name="action-left"><default>'gnome-terminal --'</default><summary>Command for left</summary></key>
     <key type="s" name="action-right"><default>'xdg-open https://github.com/morrey-Ke/easystroke-wayland'</default><summary>Command for right</summary></key>

@@ -6,13 +6,12 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
-// Four cardinal gestures plus the 12 ordered pairs whose directions differ.
 const ACTIONS = [...DIRECTIONS, ...DIRECTIONS.flatMap(first =>
     DIRECTIONS.filter(second => second !== first).map(second => `${first}-${second}`))];
-const PAUSE_THRESHOLD_MS = 350;
 
 export default class EasyStrokeWaylandExtension extends Extension {
     enable() {
+        super.enable();
         this._settings = this.getSettings();
         this._triggerButton = this._settings.get_int('trigger-button');
         this._threshold = this._settings.get_int('trigger-threshold');
@@ -36,8 +35,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
                 () => this._runAction(action)
             );
         }
-
-        console.debug(`[${this.uuid}] enabled`);
     }
 
     disable() {
@@ -54,7 +51,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
 
         this._gesture = null;
         this._settings = null;
-        console.debug(`[${this.uuid}] disabled`);
+        super.disable();
     }
 
     _onCapturedEvent(event) {
@@ -73,19 +70,21 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _onButtonPress(event) {
         if (event.get_button() !== this._triggerButton)
             return Clutter.EVENT_PROPAGATE;
+
         const [x, y] = event.get_coords();
-        this._gesture = {button: this._triggerButton, points: [{x, y, time: event.get_time()}]};
+        this._gesture = {button: this._triggerButton, points: [{x, y}]};
         return Clutter.EVENT_STOP;
     }
 
     _onMotion(event) {
         if (!this._gesture)
             return Clutter.EVENT_PROPAGATE;
+
         const [x, y] = event.get_coords();
         const points = this._gesture.points;
         const previous = points[points.length - 1];
         if (Math.hypot(x - previous.x, y - previous.y) >= 2) {
-            points.push({x, y, time: event.get_time()});
+            points.push({x, y});
             if (points.length > 2000)
                 points.splice(1, points.length - 1500);
         }
@@ -95,6 +94,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _onButtonRelease(event) {
         if (!this._gesture || event.get_button() !== this._gesture.button)
             return Clutter.EVENT_PROPAGATE;
+
         const action = this._classifyGesture(this._gesture.points);
         this._gesture = null;
         if (action)
@@ -108,6 +108,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
         const lengthSquared = dx * dx + dy * dy;
         if (lengthSquared === 0)
             return Math.hypot(point.x - start.x, point.y - start.y);
+
         const t = Math.max(0, Math.min(1,
             ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
         return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
@@ -116,6 +117,7 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _simplify(points, tolerance) {
         if (points.length <= 2)
             return points;
+
         const start = points[0];
         const end = points[points.length - 1];
         let farthestIndex = -1;
@@ -129,54 +131,37 @@ export default class EasyStrokeWaylandExtension extends Extension {
         }
         if (farthestIndex === -1)
             return [start, end];
+
         const first = this._simplify(points.slice(0, farthestIndex + 1), tolerance);
         const second = this._simplify(points.slice(farthestIndex), tolerance);
         return [...first.slice(0, -1), ...second];
     }
 
-    _directionBetween(start, end) {
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        if (Math.hypot(dx, dy) < Math.max(8, this._threshold * 0.25))
-            return null;
-        if (Math.abs(dx) >= Math.abs(dy))
-            return dx < 0 ? 'left' : 'right';
-        return dy < 0 ? 'up' : 'down';
-    }
-
-    _directionsForChunk(points) {
-        const corners = this._simplify(points, Math.max(5, this._threshold * 0.2));
-        const directions = [];
-        for (let i = 1; i < corners.length; i++) {
-            const direction = this._directionBetween(corners[i - 1], corners[i]);
-            if (direction && directions.at(-1) !== direction)
-                directions.push(direction);
-        }
-        return directions;
-    }
-
     _classifyGesture(points) {
         if (points.length < 2)
             return null;
+
         let pathLength = 0;
         for (let i = 1; i < points.length; i++)
             pathLength += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
         if (pathLength < this._threshold)
             return null;
 
-        const chunks = [[]];
-        for (let i = 0; i < points.length; i++) {
-            if (i > 0 && points[i].time - points[i - 1].time >= PAUSE_THRESHOLD_MS)
-                chunks.push([points[i - 1]]);
-            chunks[chunks.length - 1].push(points[i]);
-        }
+        const corners = this._simplify(points, Math.max(5, this._threshold * 0.2));
         const directions = [];
-        for (const chunk of chunks) {
-            for (const direction of this._directionsForChunk(chunk)) {
-                if (directions.at(-1) !== direction)
-                    directions.push(direction);
-            }
+        for (let i = 1; i < corners.length; i++) {
+            const dx = corners[i].x - corners[i - 1].x;
+            const dy = corners[i].y - corners[i - 1].y;
+            if (Math.hypot(dx, dy) < Math.max(8, this._threshold * 0.25))
+                continue;
+
+            const direction = Math.abs(dx) >= Math.abs(dy)
+                ? (dx < 0 ? 'left' : 'right')
+                : (dy < 0 ? 'up' : 'down');
+            if (directions.at(-1) !== direction)
+                directions.push(direction);
         }
+
         if (directions.length < 1 || directions.length > 2)
             return null;
         const action = directions.join('-');
@@ -186,9 +171,11 @@ export default class EasyStrokeWaylandExtension extends Extension {
     _runAction(action) {
         if (!ACTIONS.includes(action))
             return;
+
         const command = this._settings.get_string(`action-${action}`).trim();
         if (!command)
             return;
+
         try {
             Gio.Subprocess.new(['/bin/sh', '-c', command], Gio.SubprocessFlags.NONE);
         } catch (error) {
