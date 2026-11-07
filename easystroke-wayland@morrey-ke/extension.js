@@ -2,7 +2,7 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
-import Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const DIRECTIONS = ['left', 'right', 'up', 'down'];
@@ -164,8 +164,6 @@ export default class EasyStrokeWaylandExtension extends Extension {
         if (pathLength < this._threshold)
             return null;
 
-        // A brief pause can separate repeated strokes, but repeated directions
-        // are intentionally not valid actions and are removed below.
         const chunks = [[]];
         for (let i = 0; i < points.length; i++) {
             if (i > 0 && points[i].time - points[i - 1].time >= PAUSE_THRESHOLD_MS)
