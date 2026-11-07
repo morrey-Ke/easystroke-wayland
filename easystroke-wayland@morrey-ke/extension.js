@@ -31,8 +31,8 @@ export default class EasyStrokeWaylandExtension extends Extension {
         });
         this._stageCapturedEventId = global.stage.connect('captured-event', (_actor, event) => this._onCapturedEvent(event));
 
-        // These are action payloads, not global Shell bindings. Registering them
-        // with Main.wm steals combinations such as Ctrl+T from the focused app.
+        // Do not register shortcuts as global Shell keybindings: that would
+        // intercept them from the focused application (for example Ctrl+T).
         try {
             const seat = Clutter.get_default_backend().get_default_seat();
             this._virtualKeyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD);
@@ -92,8 +92,8 @@ export default class EasyStrokeWaylandExtension extends Extension {
             distance: 0,
             moved: false,
         };
-        // Let normal button presses reach the application. Only consume the
-        // gesture after it has moved far enough to pass the configured threshold.
+        // Observe presses but leave them available to the focused app. This
+        // keeps ordinary clicks, including left-handed primary clicks, intact.
         return Clutter.EVENT_PROPAGATE;
     }
 
@@ -111,11 +111,11 @@ export default class EasyStrokeWaylandExtension extends Extension {
             if (points.length > 2000)
                 points.splice(1, points.length - 1500);
         }
-
-        if (this._gesture.distance >= this._threshold) {
+        if (this._gesture.distance >= this._threshold)
             this._gesture.moved = true;
-            return Clutter.EVENT_STOP;
-        }
+
+        // Always propagate motion; consuming it prevents apps from receiving
+        // drag/motion input while a gesture is being tracked.
         return Clutter.EVENT_PROPAGATE;
     }
 
@@ -125,13 +125,14 @@ export default class EasyStrokeWaylandExtension extends Extension {
 
         const gesture = this._gesture;
         this._gesture = null;
-        if (!gesture.moved)
-            return Clutter.EVENT_PROPAGATE;
-
-        const action = this._classifyGesture(gesture.points);
-        if (action)
-            this._runAction(action);
-        return Clutter.EVENT_STOP;
+        if (gesture.moved) {
+            const action = this._classifyGesture(gesture.points);
+            if (action)
+                this._runAction(action);
+        }
+        // The release must reach the app too, so its button state is never
+        // left pressed and normal click handling remains intact.
+        return Clutter.EVENT_PROPAGATE;
     }
 
     _pointLineDistance(point, start, end) {
@@ -221,7 +222,8 @@ export default class EasyStrokeWaylandExtension extends Extension {
             if (!modifiers.includes(keyval))
                 modifiers.push(keyval);
         }
-        const keyName = accelerator.replace(tokenPattern, '').trim();
+
+        const keyName = accelerator.replace(/<[^>]+>/g, '').trim();
         const keyval = Gdk.keyval_from_name(keyName);
         if (!keyval) {
             console.warn(`[${this.uuid}] Could not parse shortcut: ${accelerator}`);
